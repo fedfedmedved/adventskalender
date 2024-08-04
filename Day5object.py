@@ -5,44 +5,13 @@ data = open('day5.txt').read().split('\n\n') #split file at empty lines
 data = [item.splitlines() for item in data]
 
 #i'd probably like to define a set of functions that preform all the appropriate conversions for me.
-# time to revise
-
-#seed-to-soil map:
-# 1  |->  1
-# 49 |-> 49
-# 98 |-> 50
-# 99 |-> 51
-# 50 |-> 52
-# 97 |-> 99
-# for x in seed [1;49] y=x (Id); [50; 97] map is x+2; for x in [98; 99] y=x-48
-# would like to have a test for the map to be properly defined - how? they did it in assignments in coursera - it was very nice
-
-#need to split data into maps. using regex? using split?
-
-#data[3] = [int(number) for number in data[3].split(' ')]
-#data[4] = [int(number) for number in data[4].split(' ')]
-
-#data[3] = range(data[3][1], data[3][1] + data[3][2]), data[3][0] - data[3][1]
-
-#want to do this for every line after the work 'map' until the next map
 
 #first we'll process the seeds into seeds and ranges (as per part 2)
 
-#data[0] = [range( int(seeds), int(seeds)+int(ranges) ) for seeds, ranges in re.findall('(?P<seeds>\d+)(?:\ )(?P<ranges>\d+)', data[0][0])]
-#print(data[0])
+data_pt2 = [range( int(seeds), int(seeds)+int(ranges) ) for seeds, ranges in re.findall('(?P<seeds>\d+)(?:\ )(?P<ranges>\d+)', data[0][0])]
 
-# our maps are actually functions y = x + k, where k is a step function
-# here we are repackaging maps into domain intervals and values of k.
-j=1
-while j!=len(data):
-    i=1
-    while i!=len(data[j]):
-        line = data[j][i]
-        line = [int(number) for number in line.split(' ')]
-        line = range(line[1], line[1] + line[2]), line[0] - line[1]
-        data[j][i] = line
-        i = i+1
-    j = j+1
+# our maps are actually functions y = x + s, where s is a step function
+# here we are repackaging maps into domain intervals and values of offset k.
 
 #### Part 1
 data_pt1 = [int(seeds) for seeds in re.findall('\d+', data[0][0])] #seeds pt1
@@ -58,10 +27,20 @@ data_pt1 = [int(seeds) for seeds in re.findall('\d+', data[0][0])] #seeds pt1
 #     def transfm:
 #         if self.value in
 
+class constant_offset_map: #linear map of type y = x + k
+    def __init__(self, params):
+        y,x,length = params #unpacking params (they are packed in a numpy array of ints)
+        self.domain = range(x, x + length)
+        self.offset = y-x #k
+    def apply_step(self, array):
+        #vectorized
+        # i need for at most one step to be applied to each input. could just add up offsets
+        return (array >= self.domain.start) * (array < self.domain.stop) * self.offset
 
 class maps:
-    def __init__(self, name):
-        self.Inhalt = []
+    def __init__(self, name, data):
+        data = [np.array(line.split(' '), dtype=int) for line in data] #see no reason to use 'real' vectorization here
+        self.Inhalt = [constant_offset_map(input) for input in data] #creating instances of offset maps
         self.name = name
     def apply_map(map, number):
         print(map.name)
@@ -72,27 +51,10 @@ class maps:
         print(number)
         return number
 
-map_objects = [] #populating maps with objects (just names for now)
+map_objects = [] #populating maps with objects
 for map in data[1:]:
-    map_title = maps(map[0])
-    map_objects.append(map_title)
-
-class conversion_map:
-    def __init__(self, interval, k):
-        self.range = interval
-        self.offset = k
-    def apply_step(self, array):
-        #vectorized
-        # i need for at most one step to be applied to each input. could just add up offsets
-        return (array >= self.range.start) * (array < self.range.stop) * self.offset
-
-for map in map_objects: #fill map objects with step functions
-    for match in data:
-        if map.name == match[0]:
-            for interval, k in match[1:]:
-                instance = conversion_map(interval, k)
-                map.Inhalt.append(instance)
-  #  print(map.name, map.Inhalt[0])
+    map_instance = maps(map[0], map[1:]) #creating instance of class
+    map_objects.append(map_instance)
 
 x = np.array(data_pt1)
 
@@ -100,15 +62,6 @@ for map in map_objects:
     x = map.apply_map(x)
 print(x)
 print(x.min())
-
-
-# okay, so this was a little convoluted, but at least i now have my maps how i imagine i want to have them.
-# i'll have to do it more elegantly later
-# now it's time to pass the seeds through the maps:
-
-
-
-
 
 #### Part 2 Solution
 
